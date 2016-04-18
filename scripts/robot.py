@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+from randomwalker.srv import GetBounds, GetScore, GetScoreRequest
+from std_msgs.msg import String
 from world import World
+import rospy
 
 """
 ### Steps for this file
@@ -29,8 +32,7 @@ class Robot(object):
     the score for the grid it's currently on.
     """
     def __init__(self, world):
-        # TODO: Create a subscriber for the 'move_command' topic.
-        # Make self._handle_move the callback.
+        self._move_sub = rospy.Subscriber('move_command', String, self._handle_move)
         self._world = world
         self._row = self._world.num_rows() / 2
         self._col = self._world.num_cols() / 2
@@ -40,10 +42,11 @@ class Robot(object):
     def _get_score(self):
         """Gets the score for the robot's current location."""
         # TODO: Call the 'get_score' service. Remember to wait for it first.
-        # TODO: Be sure you're returning an integer. When you call a service,
-        # the result is actually a response object. What do you need to do to
-        # get the integer out?
-        return None
+        rospy.wait_for_service('get_score')
+        get_score = rospy.ServiceProxy('get_score', GetScore)
+        req = GetScoreRequest(self._row, self._col)
+        res = get_score(req)
+        return res.score
 
     def _sense(self):
         """Senses the score for the current location.
@@ -110,18 +113,15 @@ class Robot(object):
         return True
 
 def get_world():
-    # TODO: Call the 'get_bounds' service (defined in mapserver.py). Don't
-    # for get to wait for it first.
-
-    # TODO: Fill out the constructor with the number of rows and columns
-    # returned from the 'get_bounds' service.
-    return World(None, None)
+    rospy.wait_for_service('get_bounds')
+    get_bounds = rospy.ServiceProxy('get_bounds', GetBounds) 
+    res = get_bounds()
+    return World(res.num_rows, res.num_cols)
 
 def main():
-    # TODO: Make this program into a ROS node called 'robot' using init_node.
-    world = get_world()
-    robot = Robot(world)
-    # TODO: Call rospy.spin()
+    rospy.init_node('robot')
+    robot = Robot(get_world())
+    rospy.spin()
 
 if __name__ == '__main__':
     main()
